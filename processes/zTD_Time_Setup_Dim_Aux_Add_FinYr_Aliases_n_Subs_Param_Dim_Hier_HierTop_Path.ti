@@ -1,0 +1,294 @@
+#region Prolog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+vThisPro = 'zTD_Time_Setup_Dim_Aux_Add_FinYr_Aliases_n_Subs_Param_Dim_Hier_HierTop_Path' ;
+
+# Copyright Success Cubed Ltd 2008-2020
+
+# GNU License
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+# ###############################################
+
+# Purpose 
+
+# This inserts a Fin Yr Alias for each Fin Yr that the user wants in this time dimension
+# It this creates a set of standard subsets with each of the FinYr Aliases.
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+# This process does not use the full set of zTD
+# process initialisation and error handling routines
+
+# ###############################################
+
+# Session Variables
+
+NumericSessionVariable('svError') ;
+
+svError = 0 ;
+
+# ###############################################
+
+# Standard Variables
+
+vDataRecCount = 0 ; 
+vMetaDataRecCount = 0 ; 
+
+ # ####################################################
+
+# Constants
+
+vCalMthAlias = 'CalMthName' ; 
+
+ # ####################################################
+
+vDim = pDim ;
+
+IF( DimensionExists( vDim ) = 0 ) ;
+  vMsg = 'The Dimension ' | vDim | ' does not exist.'    ;
+  svError = 1 ;
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+vHier = pHier ; 
+
+IF( HierarchyExists( vDim , vHier ) = 0 ) ;
+  vMsg = 'For Dimension ' | vDim | ' the Hierarchy ' | vHier | ' does not exist ' ; 
+  svError = 1 ;
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+vHierTop = pHierTop ;
+
+IF( ElementIndex(vDim , vHier , vHierTop ) = 0 ) ;
+  vMsg = 'Top Element ' | vHierTop| ' does not exist in Dimension ' | vDim | ' Hierarchy ' | vHier ;
+  svError = 1 ;
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+vPath = pPath ;
+
+IF( vPath @= '' ) ;
+  svError = 1 ;
+  vMsg = 'Path cannot be blank' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+ # ####################################################
+
+vTargetDim = vDim ;
+
+ # ####################################################
+
+vCurlyHierDim = '}Hierarchies_' | vDim ;
+
+# ##########################################################
+
+# Make up the full Path to the File and
+# check that it exists
+
+vFile = vDim | '_FinYr.csv' ; 
+
+vPathFile = vPath | vFile ;
+
+IF( FileExists( vPathFile ) = 0 ) ;
+  svError = 1 ;
+  vMsg = 'Path File ' | vPathFile | ' does not exist. Remember that the path must be relative to the server, not the client.' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+# Change Data Source to path file
+
+DatasourceNameForServer= vPathFile ;
+
+DataSourceType = 'CHARACTERDELIMITED' ;
+DatasourceASCIIDelimiter = ',' ;
+DatasourceASCIIDecimalSeparator = '.' ;
+DatasourceASCIIThousandSeparator = ',' ;
+DatasourceASCIIQuoteCharacter = '"' ;
+DatasourceASCIIHeaderRecords = 1 ;
+
+
+# #################################
+
+#endregion
+#region Metadata
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# M E T A D A T A    T A B   S T A R T
+
+IF( svError = 1 ) ;
+  ProcessBreak ;
+ENDIF ;
+
+vMetaDataRecCount = vMetaDataRecCount + 1 ;
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# ##################################################
+
+vFinYrAlias = 'F' | trim(StartMthNum )  ;
+
+AttrInsert( vDim , '' , vFinYrAlias , 'A' ) ; 
+
+#endregion
+#region Data
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# D A T A    T A B   S T A R T
+
+IF( svError = 1 ) ;
+  ProcessBreak ;
+ENDIF ;
+
+vDataRecCount = vDataRecCount + 1 ;
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# #######################################################
+
+vAlias = 'F' | trim(StartMthNum )  ;
+
+# #######################################################
+
+vSubSuffix = 'Default' ;
+
+vSub = vAlias | '_' | vSubSuffix  ; 
+
+IF( HierarchySubsetExists( vTargetDim,  vHier, vSub ) = 1 ) ;
+  HierarchySubsetDeleteAllElements( vDim , vHier , vSub ) ;
+ELSE ;
+  HierarchySubsetCreate( vDim , vHier , vSub ) ;
+ENDIF ;
+HierarchySubsetElementInsert( vDim , vHier , vSub , vHierTop , 1 );
+IF( vHier @= vDim ) ;
+  SubsetAliasSet( vDim , vSub, vAlias ) ;
+ELSE ;
+  HierarchySubsetAliasSet( vDim , vHier, vSub, vAlias ) ;
+ENDIF ;
+
+# ##
+
+vSubSuffix = 'Hier' ;
+
+vMDX = '{HIERARCHIZE(  {TM1SUBSETALL([' | vDim | '].[' | vHier | '])}  )} ' ;
+
+vSub = vAlias | '_' | vSubSuffix  ; 
+
+IF( HierarchySubsetExists( vTargetDim,  vHier, vSub ) = 0 ) ;
+  HierarchySubsetCreate( vDim , vHier , vSub ) ;
+ENDIF ;
+HierarchySubsetMDXSet( vDim , vHier , vSub , vMDX );
+IF( vHier @= vDim ) ;
+  SubsetAliasSet( vDim , vSub, vAlias ) ;
+ELSE ;
+  HierarchySubsetAliasSet( vDim , vHier, vSub, vAlias ) ;
+ENDIF ;
+
+# ##
+
+vSubSuffix = 'Base' ;
+
+vMDX = '{ TM1SORT( { TM1FILTERBYLEVEL(  {TM1SUBSETALL( [' | vDim | '].[' | vHier | '] ) } , 0 ) } , ASC )  } ' ;
+
+vSub = vAlias | '_' | vSubSuffix  ; 
+
+IF( HierarchySubsetExists( vTargetDim,  vHier, vSub ) = 0 ) ;
+  HierarchySubsetCreate( vDim , vHier , vSub ) ;
+ENDIF ;
+HierarchySubsetMDXSet( vDim , vHier , vSub , vMDX );
+IF( vHier @= vDim ) ;
+  SubsetAliasSet( vDim , vSub, vAlias ) ;
+ELSE ;
+  HierarchySubsetAliasSet( vDim , vHier, vSub, vAlias ) ;
+ENDIF ;
+
+# ##
+
+vSubSuffix = 'Consolidations' ;
+
+vMDX =     '{EXCEPT({TM1SUBSETALL( [' | vDim | '].[' | vHier | '] )},{TM1FILTERBYLEVEL( {TM1SUBSETALL( [' | vDim | '].[' | vHier | '] )}, 0)} ) }' ;
+
+vSub = vAlias | '_' | vSubSuffix  ; 
+
+IF( HierarchySubsetExists( vTargetDim,  vHier, vSub ) = 0 ) ;
+  HierarchySubsetCreate( vDim , vHier , vSub ) ;
+ENDIF ;
+HierarchySubsetMDXSet( vDim , vHier , vSub , vMDX );
+IF( vHier @= vDim ) ;
+  SubsetAliasSet( vDim , vSub, vAlias ) ;
+ELSE ;
+  HierarchySubsetAliasSet( vDim , vHier, vSub, vAlias ) ;
+ENDIF ;
+
+# ############################################################
+#endregion
+#region Epilog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# EPILOG START  (after any CubeSetLogChanges)
+
+# ##################################################
+
+# Trap for rejects due to eg inability to convert a string to number 
+# or some other such file formatting issue.
+
+vErrorFile = GetProcessErrorFileName() ;
+
+IF( vErrorFile @<> '' & svError = 0 ) ;
+  svError = 1 ;
+  vMsg = 'One or more lines were rejected, ' | 
+          'possibly due to formatting issues in the source data. ' | 
+           'Please check ' | vErrorFile | '  for more information. ' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+IF( svError = 1 ) ;
+
+  # Raise an error
+
+  ProcessQuit ;
+
+ENDIF ;
+
+# ##################################################
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+
+#endregion

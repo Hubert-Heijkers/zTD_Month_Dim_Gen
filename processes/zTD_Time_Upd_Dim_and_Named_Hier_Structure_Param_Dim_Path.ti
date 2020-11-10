@@ -1,0 +1,235 @@
+#region Prolog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+vThisPro = 'zTD_Time_Upd_Dim_and_Named_Hier_Structure_Param_Dim_Path' ;
+
+# Copyright Success Cubed Ltd 2008-2020
+
+# GNU License
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+# ###############################################
+
+# Purpose 
+
+# This builds the time dimension structure from the CSV
+# file output from the spreadsheet
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+# This process does not use the full set of zTD
+# process initialisation and error handling routines
+
+# ###############################################
+
+# Session Variables
+
+NumericSessionVariable('svError') ;
+
+svError = 0 ;
+
+# ###############################################
+
+# Standard Variables
+
+vMetaDataRecCount = 0 ; 
+
+# ###############################################
+
+# Variables
+
+vRejectCount = 0 ; 
+
+# ###############################################
+
+# Validate Parameters
+
+# #################################
+
+vDim = pDim ;
+
+IF( vDim @= '' ) ;
+  svError = 1 ;
+  vMsg = 'Dimension name cannot be blank' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+IF( DimensionExists( vDim) = 0 ) ;
+  svError = 1 ;
+  vMsg = 'Dimension ' | vDim | ' does not exist. Run the Setup step from the spreadsheet.' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+vPath = pPath ;
+
+IF( vPath @= '' ) ;
+  svError = 1 ;
+  vMsg = 'Path cannot be blank' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+# We do not break consolidation links in the dimension as
+# it should only ever be adding
+# If unwinding (breaking links) is required 
+# both the classic hierarchy and all
+# named hierarchies will need to be unwound
+# Routines can be supplied to do this
+
+# #################################
+
+# Make up the full Path to the File and
+# check that it exists
+
+vFile = vDim | '.CSV' ;
+
+vPathFile = vPath | vFile ;
+
+IF( FileExists( vPathFile ) = 0 ) ;
+  svError = 1 ;
+  vMsg = 'Path File ' | vPathFile | ' does not exist. Remember that the path must be relative to the server, not the client.' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+# Change Data Source to path file
+
+DatasourceNameForServer= vPathFile ;
+
+DataSourceType = 'CHARACTERDELIMITED' ;
+DatasourceASCIIDelimiter = ',' ;
+DatasourceASCIIDecimalSeparator = '.' ;
+DatasourceASCIIThousandSeparator = ',' ;
+DatasourceASCIIQuoteCharacter = '"' ;
+DatasourceASCIIHeaderRecords = 1 ;
+
+
+# #################################
+
+#endregion
+#region Metadata
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# M E T A D A T A    T A B   S T A R T
+
+IF( svError = 1 ) ;
+  ProcessBreak ;
+ENDIF ;
+
+vMetaDataRecCount = vMetaDataRecCount + 1 ;
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# ##############################################################
+
+IF( vType @= 'N' ) ;
+  IF( HierarchyElementExists( vDim , vHier , vChild ) = 0 ) ;
+    HierarchyElementInsert( vDim , vHier , '' , vChild , 'N' ) ;
+  ENDIF ;
+ELSEIF( vType @= 'C' ) ;
+  # This is really only for the Top of the Classic Hier where
+  # the element needs to go in as a C but with no parent.
+  IF( HierarchyElementExists( vDim , vHier , vChild ) = 0 ) ;
+    HierarchyElementInsert( vDim , vHier , '' , vChild , 'C' ) ;
+  ENDIF ;
+ELSEIF( vType @= 'NC' % vType @= 'CC'  ) ;
+  IF( vParent @=  '' ) ;
+    vRejectCount = vRejectCount + 1 ; 
+    vMsg = 'On row ' | NumberToString( vMetaDataRecCount ) | ' for Child ' | vChild |
+                 ' the Parent is blank but on a type ' | vType | ' it the parent should be given. ' | 
+                ' Error in file creation.' ; 
+    ItemReject( vMsg ) ;
+  ENDIF ;
+  IF( HierarchyElementExists( vDim , vHier , vChild ) = 0 ) ; 
+    # Insert as N or C depending on first letter of Type
+    HierarchyElementInsert( vDim , vHier , '' , vChild , subst( vType , 1, 1 )  ) ;
+  ENDIF ;
+  # The Parent must always be a C by definition
+  HierarchyElementInsert( vDim , vHier , '' , vParent , 'C' ) ;
+  HierarchyElementComponentAdd( vDim , vHier , vParent , vChild , vWeight ) ;
+ELSE ;
+    vRejectCount = vRejectCount + 1 ; 
+    vMsg = 'On row ' | NumberToString( vMetaDataRecCount ) | ' for Child ' | vChild |
+                 ' the type is invalid .' | 
+                ' Error in file creation.' ; 
+    ItemReject( vMsg ) ;
+ENDIF ;
+
+# ##############################################################
+
+
+#endregion
+#region Data
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+#endregion
+#region Epilog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+IF( vRejectCount > 0 ) ; 
+  svError = 1 ;
+ENDIF ;
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# EPILOG START  (after any CubeSetLogChanges)
+
+# ##################################################
+
+# Trap for rejects due to eg inability to convert a string to number 
+# or some other such file formatting issue.
+
+vErrorFile = GetProcessErrorFileName() ;
+
+IF( vErrorFile @<> '' & svError = 0 ) ;
+  svError = 1 ;
+  vMsg = 'One or more lines were rejected, ' | 
+          'possibly due to formatting issues in the source data. ' | 
+           'Please check ' | vErrorFile | '  for more information. ' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+IF( svError = 1 ) ;
+
+  # Raise an error
+
+  ProcessQuit ;
+
+ENDIF ;
+
+# ##################################################
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+
+#endregion

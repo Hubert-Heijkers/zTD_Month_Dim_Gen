@@ -1,0 +1,203 @@
+#region Prolog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+vThisPro = 'zTD_Time_Load_Attr_Param_Dim_Path' ;
+
+# Copyright Success Cubed Ltd 2008-2020
+
+# GNU License
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+# ###############################################
+
+# Purpose 
+
+# This loads in Attributes from a CSV file  for the given Time dimension
+
+# ###############################################
+
+# Session Variables
+
+NumericSessionVariable('svError') ;
+
+svError = 0 ;
+
+# ###############################################
+
+# Standard Variables
+
+vDataRecCount = 0 ; 
+vMetaDataRecCount = 0 ; 
+
+# ###############################################
+
+# #################################
+
+# Validate Parameters
+
+# #################################
+
+vDim = pDim ;
+
+IF( vDim @= '' ) ;
+  svError = 1 ;
+  vMsg = 'Dimension name cannot be blank' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+IF( DimensionExists( vDim) = 0 ) ;
+  svError = 1 ;
+  vMsg = 'Dimension ' | vDim | ' does not exist. Run the Setup step from the spreadsheet.' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+vPath = pPath ;
+
+IF( vPath @= '' ) ;
+  svError = 1 ;
+  vMsg = 'Path cannot be blank' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+vAttrDim = '}ElementAttributes_' | vDim ;
+
+# #################################
+
+# Make up the full Path to the File and
+# check that it exists
+
+vFile = vDim | '_Attr.CSV' ;
+
+vPathFile = vPath | vFile ;
+
+IF( FileExists( vPathFile ) = 0 ) ;
+  svError = 1 ;
+  vMsg = 'Path File ' | vPathFile | ' does not exist. Remember that the path must be relative to the server, not the client.' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+# #################################
+
+# Change Data Source to path file
+
+DatasourceNameForServer= vPathFile ;
+
+DataSourceType = 'CHARACTERDELIMITED' ;
+DatasourceASCIIDelimiter = ',' ;
+DatasourceASCIIDecimalSeparator = '.' ;
+DatasourceASCIIThousandSeparator = ',' ;
+DatasourceASCIIQuoteCharacter = '"' ;
+DatasourceASCIIHeaderRecords = 1 ;
+
+
+# #################################
+#endregion
+#region Metadata
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# M E T A D A T A    T A B   S T A R T
+
+IF( svError = 1 ) ;
+  ProcessBreak ;
+ENDIF ;
+
+vMetaDataRecCount = vMetaDataRecCount + 1 ;
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# Create the Attributes if they don't already exist
+# As Attributes are shared across all Named Hierarchies
+# we don't need to do anything hierarchy specific here
+
+IF( Dimix( vAttrDim, vAttrName ) = 0 ) ;
+  AttrInsert( vDim, '', vAttrName, 'S' )  ;
+ENDIF ;
+
+
+
+#endregion
+#region Data
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# D A T A    T A B   S T A R T
+
+IF( svError = 1 ) ;
+  ProcessBreak ;
+ENDIF ;
+
+vDataRecCount = vDataRecCount + 1 ;
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+ElementAttrPutS( vAttrValue , vDim , vHier , vElem , vAttrName ) ;
+#endregion
+#region Epilog
+
+#****Begin: Generated Statements***
+#****End: Generated Statements****
+
+# NON-STANDARD CUT DOWN ERROR HANDLING
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+# EPILOG START  (after any CubeSetLogChanges)
+
+# ##################################################
+
+# Trap for rejects due to eg inability to convert a string to number 
+# or some other such file formatting issue.
+
+vErrorFile = GetProcessErrorFileName() ;
+
+IF( vErrorFile @<> '' & svError = 0 ) ;
+  svError = 1 ;
+  vMsg = 'One or more lines were rejected, ' | 
+          'possibly due to formatting issues in the source data. ' | 
+           'Please check ' | vErrorFile | '  for more information. ' ; 
+  ItemReject( vMsg ) ;
+ENDIF ;
+
+IF( svError = 1 ) ;
+
+  # Raise an error
+
+  ProcessQuit ;
+
+ENDIF ;
+
+# ##################################################
+
+# SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+
+
+#endregion
